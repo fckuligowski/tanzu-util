@@ -1,0 +1,17 @@
+[sources.in]
+  address = "0.0.0.0:514" # required, required when mode = "tcp" or mode = "udp"
+  mode = "tcp" # required
+  path = "/path/to/socket" # required, required when mode = "unix"
+  type = "syslog" # required
+  #type = "stdin"
+
+[sinks.out]
+  # Encoding
+  encoding.codec = "json" # required
+
+  # General
+  group_name = "fklogs" # required
+  inputs = ["in"] # required
+  region = "ca-central-1" # required, required when endpoint = ""
+  stream_name = "{{ host }}" # required
+  type = "aws_cloudwatch_logs" # required
