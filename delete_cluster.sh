@@ -35,5 +35,19 @@ for S in "${SARR[@]}"; do
     aws ec2 delete-tags --resources "$S" \
       --tags Key="$TAG"
 done
+# Remove any Load Balancers that were setup for k8s Services running
+# from this delete cluster. We know what these are because they have
+# a tag matching the cluster UUID.
+ALLLOADBALS=$(aws elb describe-load-balancers | \
+jq -r '.LoadBalancerDescriptions[] | .LoadBalancerName')
+LBARR=($ALLLOADBALS)
+for LB in "${LBARR[@]}"; do
+    LBNAME=$(aws elb describe-tags --load-balancer-names $LB | \
+    jq -r --arg tag "$TAG" '.TagDescriptions[] | select(.Tags[].Key == $tag) | .LoadBalancerName')
+    if [ ! -z "$LBNAME" ]; then
+        echo "deleting Load Balancer $LBNAME"
+        aws elb delete-load-balancer --load-balancer-name "$LBNAME"
+    fi
+done
 # Show the cluster status one last time before we go
 tkgi cluster $CLUSTER_NAME
