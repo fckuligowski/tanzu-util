@@ -10,8 +10,8 @@
   encoding.codec = "json" # required
 
   # General
-  group_name = "fklogs" # required
+  group_name = "tkg-eu-logs" # required
   inputs = ["in"] # required
-  region = "ca-central-1" # required, required when endpoint = ""
+  region = "eu-west-1" # required, required when endpoint = ""
   stream_name = "{{ host }}" # required
   type = "aws_cloudwatch_logs" # required
