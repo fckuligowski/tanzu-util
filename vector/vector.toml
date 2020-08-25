@@ -1,8 +1,12 @@
 [sources.in]
-  address = "0.0.0.0:514" # required, required when mode = "tcp" or mode = "udp"
+  address = "0.0.0.0:5014" # required, required when mode = "tcp" or mode = "udp"
   mode = "tcp" # required
   path = "/path/to/socket" # required, required when mode = "unix"
   type = "syslog" # required
+  #tls.enabled = true
+  #tls.verify_certificate = true
+  #tls.crt_file = "/home/ubuntu/tanzu/certs/syslog.crt"
+  #tls.key_file = "/home/ubuntu/tanzu/certs/syslog.key"
   #type = "stdin"
 
 [sinks.out]
