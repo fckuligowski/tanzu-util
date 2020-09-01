@@ -19,7 +19,21 @@ UUID=$(tkgi cluster $CLUSTER_NAME --details | grep -oP "UUID:\s*\K(\S*)")
 # load balancer, or not, based on the user's choice. 
 # So, we just always delete them both (--non-interactive).
 tkgi delete-cluster "$CLUSTER_NAME" --non-interactive
+# Wait for the Cluster to finish provisioning
+echo "Waiting for cluster to delete"
+STATUS="in progress"
+while [ "$STATUS" == "in progress" ]; do
+  sleep 30
+  CLFOUND=$(tkgi clusters | grep $CLUSTER_NAME)
+  if [ "$1" != "" ]; then
+    STATUS=$(tkgi cluster $CLUSTER_NAME | grep -oP 'Last Action State:\s*\K(.*)')
+    echo "$STATUS - `date`"
+  else
+    echo "$CLUSTER_NAME has been deleted"
+  fi
+done
 # Delete the Load Balancer
+echo "Deleting cluster Load Balancer - $CLUSTER_NAME"
 aws elb delete-load-balancer --load-balancer-name "$CLUSTER_NAME"
 # Remove any Tags for this cluster from the public subnets.
 # That tag is used when k8s services of Type=Loadbalancer are deployed.
@@ -49,5 +63,15 @@ for LB in "${LBARR[@]}"; do
         aws elb delete-load-balancer --load-balancer-name "$LBNAME"
     fi
 done
+#
+# Delete any EBS volumes that were dynamically provisioned.
+#
+EBS_ALL=$(aws ec2 describe-volumes --filters "Name=tag:Name,Values=$CLUSTER_NAME*" | \
+jq -r '.Volumes[] | select(.Tags[].Key == "Name") | .VolumeId' | sort)
+EBS_ARR=($EBS_ALL)
+for EBS in "${EBS_ARR[@]}"; do 
+    echo "Deleting EBS Volume $EBS"
+    aws ec2 delete-volume --volume-id $EBS
+done
 # Show the cluster status one last time before we go
-tkgi cluster $CLUSTER_NAME
+echo "Delete complete - $CLUSTER_NAME"

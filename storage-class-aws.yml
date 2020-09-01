@@ -1,0 +1,9 @@
+# This defines the storage class that can be used by 
+# Persistent Volume Claims to auto-provision EBS storage.
+kind: StorageClass
+apiVersion: storage.k8s.io/v1
+metadata:
+  name: ci-storage
+  annotations:
+    storageclass.kubernetes.io/is-default-class: "true"
+provisioner: kubernetes.io/aws-ebs

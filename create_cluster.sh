@@ -5,6 +5,12 @@ else
     echo "Please provide a Name for the Cluster"
     exit 1
 fi
+# Define the Plan (size) of the Cluster.
+if [ "$2" != "" ]; then
+    PLAN="$2"
+else
+    PLAN="small"
+fi
 # Define other required parameters that we can't get elsewhere.
 # ENV is the domain name you gave to your TKG install
 ENV="tkg-eu"
@@ -46,7 +52,7 @@ echo "Load Balancer: $LBNAME"
 # add the master node to the LB
 UUID=$(tkgi create-cluster $CLUSTER_NAME \
 --external-hostname $LBNAME \
---plan small \
+--plan $PLAN \
 --tags name:$CLUSTER_NAME | grep -oP 'UUID:\s*\K(\S*)')
 echo "Cluster UUID: $UUID"
 # Wait for the Cluster to finish provisioning
@@ -81,5 +87,19 @@ jq -r --arg uuid "$DEPLOY_ID" '.Reservations[].Instances | select(.[].Tags[].Key
 # Add the cluster name as a tag to those VMs
 aws ec2 create-tags --resources $NODES --tags "Key=Cluster,Value=$CLUSTER_NAME"
 # Get the kubectl credentials for the new cluster
-# (not required, just nice to have).
+# (used in next step for storage classes).
 tkgi get-credentials $CLUSTER_NAME
+# Wait for the Cluster Load Balancer to recognize the
+# master nodes of the cluster's control plane.
+echo "Waiting for Load Bal to find Cluster"
+ONLINE_INSTANCES=""
+while [ "$ONLINE_INSTANCES" == "" ]; do
+  sleep 10
+  ONLINE_INSTANCES=$(aws elb describe-instance-health --load-balancer-name $CLUSTER_NAME | \
+  jq -r '.InstanceStates[] | select(.State == "InService") | .InstanceId')
+  echo "`date` - ONLINE_INSTANCES - $ONLINE_INSTANCES"
+done
+# Apply AWS storage class to the cluster
+kubectl apply -f storage-class-aws.yml
+# Show the cluster info (nice to have).
+tkgi cluster $CLUSTER_NAME
